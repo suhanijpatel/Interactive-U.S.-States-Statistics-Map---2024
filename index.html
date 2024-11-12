@@ -61,6 +61,30 @@
       padding: 5px;
       pointer-events: none;
     }
+
+    #controls-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      /* Align everything to the left */
+      gap: 10px;
+      /* Add spacing between controls */
+    }
+
+    #year-slider {
+      width: 100%;
+      /* Ensure slider stretches to fit container */
+    }
+
+    #metric {
+      width: 300px;
+      /* Align width with slider */
+    }
+
+    #slider-container {
+      margin-bottom: 15px;
+      /* Space between slider and dropdown */
+    }
   </style>
 </head>
 
@@ -68,12 +92,20 @@
   <div class="title">US State Metrics Visualization</div>
 
   <div class="map-container">
-    <select id="year" class="dropdown"></select>
-    <select id="metric" class="dropdown">
-      <option value="personalIncome">Personal Income</option>
-      <option value="gdp">GDP</option>
-      <option value="consumerSpending">Consumer Spending</option>
-    </select>
+    <div id="controls-container" style="position: relative; margin-bottom: 20px;">
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 15px;">
+        <div id="slider-container" style="width: 300px;">
+          <label id="year-label" style="font-size: 16px; font-weight: bold;">Year: 2000</label>
+          <input id="year-slider" type="range" class="slider" min="0" max="0" step="1" value="0"
+            style="width: 100%; margin-top: 5px;">
+        </div>
+        <select id="metric" class="dropdown" style="margin-top: 20px;">
+          <option value="personalIncome">Personal Income</option>
+          <option value="gdp">GDP</option>
+          <option value="consumerSpending">Consumer Spending</option>
+        </select>
+      </div>
+    </div>
     <svg width="960" height="600"></svg>
     <div id="legend"></div>
   </div>
@@ -209,30 +241,44 @@
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : "N/A";
 
-          // Format the value for tooltip (e.g., 1M, 1B)
-          const formattedValue = value !== "N/A" ? d3.format(".2s")(value) : value;
+          // Format the value for tooltip with proper units
+          let formattedValue;
+          if (value !== "N/A") {
+            if (value >= 1e9) {
+              formattedValue = `${(value / 1e9).toFixed(2)} Billion`;
+            } else if (value >= 1e6) {
+              formattedValue = `${(value / 1e6).toFixed(2)} Million`;
+            } else {
+              formattedValue = value.toLocaleString(); // Format for smaller numbers
+            }
+          } else {
+            formattedValue = "N/A";
+          }
 
           const container = document.querySelector(".map-container");
           const rect = container.getBoundingClientRect();
 
+          // Position tooltip at the top right corner of the map container
           tooltip.style("display", "block")
             .html(`
         <strong>${stateName}</strong><br>
-        ${metricLabels[metric]} (${year}): ${formattedValue}${metricUnits[metric]}
+        ${metricLabels[metric]} (${year}): ${formattedValue} ${metricUnits[metric]}
       `)
-            .style("left", `${rect.right - tooltip.node().offsetWidth - 10}px`)
+            .style("left", `${rect.right - tooltip.node().offsetWidth - 20}px`)
             .style("top", `${rect.top + 10}px`);
           d3.select(event.currentTarget).attr("fill", "#db4780");
         })
-        .on("mouseout", function () {
-          tooltip.style("display", "none");
-          d3.select(this).attr("fill", d => {
-            const stateName = stateIdToName[d.id];
-            const stateData = data[metric].find(row => row.GeoName === stateName);
-            const value = stateData ? +stateData[year] : null;
-            return value ? quantiles(value) : "#ccc";
-          });
+        .on("mouseout", function (event, d) {
+          tooltip.style("display", "none"); // Hide the tooltip
+
+          // Restore the original heatmap color
+          const stateName = stateIdToName[d.id];
+          const stateData = data[metric].find(row => row.GeoName === stateName);
+          const value = stateData ? +stateData[year] : null;
+
+          d3.select(this).attr("fill", value ? quantiles(value) : "#ccc");
         });
+
 
       updateLegend(quantiles, metric);
     };
@@ -284,26 +330,35 @@
     const initializeVisualization = async () => {
       const { states, allData, years, globalMinMax } = await loadData();
 
-      const yearDropdown = d3.select("#year");
+      const yearSlider = d3.select("#year-slider")
+        .attr("min", 0)
+        .attr("max", years.length - 1)
+        .attr("step", 1)
+        .attr("value", 0);
+
+      const yearLabel = d3.select("#year-label");
+
       const metricDropdown = d3.select("#metric");
 
-      years.forEach(year => {
-        yearDropdown.append("option").attr("value", year).text(year);
-      });
+      const updateYearLabel = (index) => {
+        yearLabel.text(`Year: ${years[index]}`);
+      };
+
+      updateYearLabel(0); // Initialize with the first year
 
       const updateVisualization = () => {
         const metric = metricDropdown.property("value");
-        const year = yearDropdown.property("value");
+        const yearIndex = yearSlider.property("value");
+        const year = years[yearIndex];
+        updateYearLabel(yearIndex);
         updateMap(states, allData, metric, year, globalMinMax);
       };
 
       metricDropdown.on("change", updateVisualization);
-      yearDropdown.on("change", updateVisualization);
+      yearSlider.on("input", updateVisualization); // Use "input" for real-time updates
 
-      yearDropdown.property("value", years[0]); // Set initial year
-      updateVisualization();
+      updateVisualization(); // Initial visualization
     };
-
 
     initializeVisualization();
   </script>

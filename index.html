@@ -7,6 +7,53 @@
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://d3js.org/topojson.v3.min.js"></script>
   <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
+    .title {
+      margin: 20px 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .map-container {
+      background-color: rgb(248, 209, 226);
+      padding: 20px;
+      position: relative;
+      display: inline-block;
+      border-radius: 10px;
+    }
+
+    .dropdown {
+      position: absolute;
+      font-size: 16px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #ffffff;
+      z-index: 10;
+    }
+
+    #year {
+      top: 10px;
+      left: 10px;
+    }
+
+    #metric {
+      top: 50px;
+      left: 10px;
+    }
+
+    svg {
+      display: block;
+    }
+
     .tooltip {
       position: absolute;
       background-color: white;
@@ -14,22 +61,23 @@
       padding: 5px;
       pointer-events: none;
     }
-
-    select {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-    }
   </style>
 </head>
 
 <body>
-  <select id="metric">
-    <option value="personalIncome">Personal Income</option>
-    <option value="gdp">GDP</option>
-    <option value="consumerSpending">Consumer Spending</option>
-  </select>
-  <svg width="960" height="600"></svg>
+  <div class="title">US State Metrics Visualization</div>
+
+  <div class="map-container">
+    <select id="year" class="dropdown"></select>
+    <select id="metric" class="dropdown">
+      <option value="personalIncome">Personal Income</option>
+      <option value="gdp">GDP</option>
+      <option value="consumerSpending">Consumer Spending</option>
+    </select>
+    <svg width="960" height="600"></svg>
+    <div id="legend"></div>
+  </div>
+
   <div class="tooltip" style="display: none;"></div>
 
   <script>
@@ -40,7 +88,6 @@
     const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2]);
     const path = d3.geoPath().projection(projection);
 
-    // Manually map state IDs to state names
     const stateIdToName = {
       1: "Alabama",
       2: "Alaska",
@@ -95,68 +142,172 @@
       56: "Wyoming"
     };
 
-    Promise.all([
-      d3.json("data/cleaned-us-state-boundaries.json"), 
-      d3.csv("data/cleaned-personal-income.csv"),
-      d3.csv("data/cleaned-gdp.csv"),
-      d3.csv("data/cleaned-consumer-spending.csv")
-    ]).then(([geoData, personalIncome, gdp, consumerSpending]) => {
+    const metricLabels = {
+      personalIncome: "Personal Income",
+      gdp: "GDP",
+      consumerSpending: "Consumer Spending"
+    };
+
+    const metricUnits = {
+      personalIncome: "USD",
+      gdp: "Billion USD",
+      consumerSpending: "USD"
+    };
+
+    const loadData = async () => {
+      const geoData = await d3.json("data/cleaned-us-state-boundaries.json");
+      const personalIncome = await d3.csv("data/cleaned-personal-income.csv");
+      const gdp = await d3.csv("data/cleaned-gdp.csv");
+      const consumerSpending = await d3.csv("data/cleaned-consumer-spending.csv");
+
       const states = topojson.feature(geoData, geoData.objects.states);
 
-      const data = {};
-      personalIncome.forEach(d => data[d.GeoName] = { personalIncome: +d["2023"] });
-      gdp.forEach(d => data[d.GeoName] = { ...data[d.GeoName], gdp: +d["2023"] });
-      consumerSpending.forEach(d => data[d.GeoName] = { ...data[d.GeoName], consumerSpending: +d["2023"] });
+      const allData = { personalIncome, gdp, consumerSpending };
 
-      const colorScale = d3.scaleQuantize().range(d3.schemeBlues[9]);
+      const years = Object.keys(personalIncome[0]).filter(d => !isNaN(d));
 
-      const updateMap = (metric) => {
-        const values = states.features.map(d => {
-          const stateName = stateIdToName[d.id]; 
-          return data[stateName]?.[metric] || 0;
-        });
-        colorScale.domain([d3.min(values), d3.max(values)]);
-
-        svg.selectAll("path")
-          .data(states.features)
-          .join("path")
-          .attr("d", path)
-          .attr("fill", d => {
-            const stateName = stateIdToName[d.id];
-            const value = data[stateName]?.[metric];
-            return value ? colorScale(value) : "#ccc";
-          })
-          .attr("stroke", "#ffffff")
-          .attr("stroke-width", 0.5)
-          .on("mouseover", function (event, d) {
-            const stateName = stateIdToName[d.id];
-            const stateData = data[stateName];
-            tooltip.style("display", "block")
-              .html(`
-                <strong>${stateName}</strong><br>
-                ${metric}: ${stateData ? stateData[metric] : "N/A"}
-              `)
-              .style("left", `${event.pageX + 10}px`)
-              .style("top", `${event.pageY + 10}px`);
-            d3.select(this).attr("fill", "#2d7a46");
-          })
-          .on("mouseout", function () {
-            tooltip.style("display", "none");
-            d3.select(this).attr("fill", d => {
-              const stateName = stateIdToName[d.id];
-              const value = data[stateName]?.[metric];
-              return value ? colorScale(value) : "#ccc";
-            });
-          });
-      };
-
-      d3.select("#metric").on("change", function () {
-        updateMap(this.value);
+      // Calculate global min and max for each metric across all years
+      const globalMinMax = {};
+      Object.keys(allData).forEach(metric => {
+        const values = allData[metric].flatMap(row =>
+          years.map(year => +row[year]).filter(value => !isNaN(value))
+        );
+        globalMinMax[metric] = [d3.min(values), d3.max(values)];
       });
 
-      updateMap("personalIncome");
-    }).catch(error => console.error("Error loading data:", error));
+      return { states, allData, years, globalMinMax };
+    };
+
+
+    const updateMap = (states, data, metric, year, globalMinMax) => {
+      const [globalMin, globalMax] = globalMinMax[metric];
+
+      // Define quantiles for the color scale
+      const allValues = data[metric].flatMap(row => {
+        const value = +row[year];
+        return !isNaN(value) ? value : [];
+      });
+      const quantiles = d3.scaleQuantile()
+        .domain(allValues)
+        .range(d3.schemeBlues[9]); // Use 9 discrete colors
+
+      d3.select("svg").selectAll("path")
+        .data(states.features)
+        .join("path")
+        .attr("d", path)
+        .attr("fill", d => {
+          const stateName = stateIdToName[d.id];
+          const stateData = data[metric].find(row => row.GeoName === stateName);
+          const value = stateData ? +stateData[year] : null;
+
+          return value ? quantiles(value) : "#ccc";
+        })
+        .attr("stroke", "#000")
+        .attr("stroke-width", 0.5)
+        .on("mouseover", (event, d) => {
+          const stateName = stateIdToName[d.id];
+          const stateData = data[metric].find(row => row.GeoName === stateName);
+          const value = stateData ? +stateData[year] : "N/A";
+
+          // Format the value for tooltip (e.g., 1M, 1B)
+          const formattedValue = value !== "N/A" ? d3.format(".2s")(value) : value;
+
+          const container = document.querySelector(".map-container");
+          const rect = container.getBoundingClientRect();
+
+          tooltip.style("display", "block")
+            .html(`
+        <strong>${stateName}</strong><br>
+        ${metricLabels[metric]} (${year}): ${formattedValue}${metricUnits[metric]}
+      `)
+            .style("left", `${rect.right - tooltip.node().offsetWidth - 10}px`)
+            .style("top", `${rect.top + 10}px`);
+          d3.select(event.currentTarget).attr("fill", "#db4780");
+        })
+        .on("mouseout", function () {
+          tooltip.style("display", "none");
+          d3.select(this).attr("fill", d => {
+            const stateName = stateIdToName[d.id];
+            const stateData = data[metric].find(row => row.GeoName === stateName);
+            const value = stateData ? +stateData[year] : null;
+            return value ? quantiles(value) : "#ccc";
+          });
+        });
+
+      updateLegend(quantiles, metric);
+    };
+
+
+
+    const updateLegend = (colorScale, metric) => {
+      const legendWidth = 300, legendHeight = 10;
+
+      const legend = d3.select("#legend").html("").append("svg")
+        .attr("width", legendWidth + 40)
+        .attr("height", 80);
+
+      const quantileThresholds = colorScale.quantiles(); // Get thresholds for quantile scale
+
+      // Create gradient for discrete quantile colors
+      quantileThresholds.forEach((threshold, i) => {
+        legend.append("rect")
+          .attr("x", (legendWidth / quantileThresholds.length) * i + 10)
+          .attr("y", 10)
+          .attr("width", legendWidth / quantileThresholds.length)
+          .attr("height", legendHeight)
+          .attr("fill", colorScale(threshold));
+      });
+
+      const legendScale = d3.scaleLinear()
+        .domain([quantileThresholds[0], quantileThresholds[quantileThresholds.length - 1]])
+        .range([10, legendWidth + 10]);
+
+      const axis = d3.axisBottom(legendScale)
+        .ticks(5)
+        .tickFormat(d3.format(".2s")); // Format ticks (e.g., 1M, 1B)
+
+      legend.append("g")
+        .attr("transform", "translate(0, 30)")
+        .call(axis);
+
+      legend.append("text")
+        .attr("x", legendWidth / 2)
+        .attr("y", 70)
+        .attr("text-anchor", "middle")
+        .style("fill", "black")
+        .style("font-size", "14px")
+        .text(`Color Scale For ${metricLabels[metric]}`);
+    };
+
+
+
+    const initializeVisualization = async () => {
+      const { states, allData, years, globalMinMax } = await loadData();
+
+      const yearDropdown = d3.select("#year");
+      const metricDropdown = d3.select("#metric");
+
+      years.forEach(year => {
+        yearDropdown.append("option").attr("value", year).text(year);
+      });
+
+      const updateVisualization = () => {
+        const metric = metricDropdown.property("value");
+        const year = yearDropdown.property("value");
+        updateMap(states, allData, metric, year, globalMinMax);
+      };
+
+      metricDropdown.on("change", updateVisualization);
+      yearDropdown.on("change", updateVisualization);
+
+      yearDropdown.property("value", years[0]); // Set initial year
+      updateVisualization();
+    };
+
+
+    initializeVisualization();
   </script>
+
 </body>
 
 </html>

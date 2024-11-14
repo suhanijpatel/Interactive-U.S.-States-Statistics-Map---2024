@@ -66,24 +66,19 @@
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      /* Align everything to the left */
       gap: 10px;
-      /* Add spacing between controls */
     }
 
     #year-slider {
       width: 100%;
-      /* Ensure slider stretches to fit container */
     }
 
     #metric {
       width: 300px;
-      /* Align width with slider */
     }
 
     #slider-container {
       margin-bottom: 15px;
-      /* Space between slider and dropdown */
     }
   </style>
 </head>
@@ -100,9 +95,9 @@
             style="width: 100%; margin-top: 5px;">
         </div>
         <select id="metric" class="dropdown" style="margin-top: 20px;">
-          <option value="personalIncome">Personal Income</option>
-          <option value="gdp">GDP</option>
-          <option value="consumerSpending">Consumer Spending</option>
+          <option value="personalIncome">Total Personal Income by State</option>
+          <option value="gdp">Total GDP by State</option>
+          <option value="consumerSpending">Total Consumer Spending by State</option>
         </select>
       </div>
     </div>
@@ -175,9 +170,9 @@
     };
 
     const metricLabels = {
-      personalIncome: "Personal Income",
+      personalIncome: "Total Personal Income [Millions of Dollars]",
       gdp: "GDP",
-      consumerSpending: "Consumer Spending"
+      consumerSpending: "Total Consumer Spending [Millions of Dollars]"
     };
 
     const metricUnits = {
@@ -198,7 +193,6 @@
 
       const years = Object.keys(personalIncome[0]).filter(d => !isNaN(d));
 
-      // Calculate global min and max for each metric across all years
       const globalMinMax = {};
       Object.keys(allData).forEach(metric => {
         const values = allData[metric].flatMap(row =>
@@ -210,18 +204,15 @@
       return { states, allData, years, globalMinMax };
     };
 
-
     const updateMap = (states, data, metric, year, globalMinMax) => {
       const [globalMin, globalMax] = globalMinMax[metric];
-
-      // Define quantiles for the color scale
       const allValues = data[metric].flatMap(row => {
         const value = +row[year];
         return !isNaN(value) ? value : [];
       });
       const quantiles = d3.scaleQuantile()
         .domain(allValues)
-        .range(d3.schemeBlues[9]); // Use 9 discrete colors
+        .range(d3.schemeBlues[9]);
 
       d3.select("svg").selectAll("path")
         .data(states.features)
@@ -231,7 +222,6 @@
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : null;
-
           return value ? quantiles(value) : "#ccc";
         })
         .attr("stroke", "#000")
@@ -241,60 +231,41 @@
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : "N/A";
 
-          // Format the value for tooltip with proper units
           let formattedValue;
           if (value !== "N/A") {
-            if (value >= 1e9) {
-              formattedValue = `${(value / 1e9).toFixed(2)} Billion`;
-            } else if (value >= 1e6) {
-              formattedValue = `${(value / 1e6).toFixed(2)} Million`;
-            } else {
-              formattedValue = value.toLocaleString(); // Format for smaller numbers
-            }
+            formattedValue = value.toLocaleString();
           } else {
             formattedValue = "N/A";
           }
 
-          const container = document.querySelector(".map-container");
-          const rect = container.getBoundingClientRect();
-
-          // Position tooltip at the top right corner of the map container
           tooltip.style("display", "block")
             .html(`
-        <strong>${stateName}</strong><br>
-        ${metricLabels[metric]} (${year}): ${formattedValue} ${metricUnits[metric]}
-      `)
-            .style("left", `${rect.right - tooltip.node().offsetWidth - 20}px`)
-            .style("top", `${rect.top + 10}px`);
+              <strong>${stateName}</strong><br>
+              ${metricLabels[metric]} (${year}): ${formattedValue} ${metricUnits[metric]}
+            `)
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY + 10}px`);
+
           d3.select(event.currentTarget).attr("fill", "#db4780");
         })
         .on("mouseout", function (event, d) {
-          tooltip.style("display", "none"); // Hide the tooltip
-
-          // Restore the original heatmap color
+          tooltip.style("display", "none");
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : null;
-
           d3.select(this).attr("fill", value ? quantiles(value) : "#ccc");
         });
-
 
       updateLegend(quantiles, metric);
     };
 
-
-
     const updateLegend = (colorScale, metric) => {
       const legendWidth = 300, legendHeight = 10;
-
       const legend = d3.select("#legend").html("").append("svg")
         .attr("width", legendWidth + 40)
         .attr("height", 80);
 
-      const quantileThresholds = colorScale.quantiles(); // Get thresholds for quantile scale
-
-      // Create gradient for discrete quantile colors
+      const quantileThresholds = colorScale.quantiles();
       quantileThresholds.forEach((threshold, i) => {
         legend.append("rect")
           .attr("x", (legendWidth / quantileThresholds.length) * i + 10)
@@ -310,7 +281,7 @@
 
       const axis = d3.axisBottom(legendScale)
         .ticks(5)
-        .tickFormat(d3.format(".2s")); // Format ticks (e.g., 1M, 1B)
+        .tickFormat(d3.format(".2s"));
 
       legend.append("g")
         .attr("transform", "translate(0, 30)")
@@ -325,8 +296,6 @@
         .text(`Color Scale For ${metricLabels[metric]}`);
     };
 
-
-
     const initializeVisualization = async () => {
       const { states, allData, years, globalMinMax } = await loadData();
 
@@ -337,14 +306,13 @@
         .attr("value", 0);
 
       const yearLabel = d3.select("#year-label");
-
       const metricDropdown = d3.select("#metric");
 
       const updateYearLabel = (index) => {
         yearLabel.text(`Year: ${years[index]}`);
       };
 
-      updateYearLabel(0); // Initialize with the first year
+      updateYearLabel(0);
 
       const updateVisualization = () => {
         const metric = metricDropdown.property("value");
@@ -355,14 +323,13 @@
       };
 
       metricDropdown.on("change", updateVisualization);
-      yearSlider.on("input", updateVisualization); // Use "input" for real-time updates
+      yearSlider.on("input", updateVisualization);
 
-      updateVisualization(); // Initial visualization
+      updateVisualization();
     };
 
     initializeVisualization();
   </script>
-
 </body>
 
 </html>

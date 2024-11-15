@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>US Metrics Line Chart</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .title {
+            margin: 20px 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            background-color: #e6f7ff;
+            padding: 20px;
+            position: relative;
+            display: inline-block;
+            border-radius: 10px;
+        }
+
+        .dropdown {
+            position: absolute;
+            font-size: 16px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #ffffff;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        svg {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">US Metrics Line Chart</div>
+
+    <div class="chart-container">
+        <select id="metric" class="dropdown">
+          <option value="personal-income">US Personal Income</option>
+          <option value="gdp">US GDP</option>
+          <option value="consumer-spending">US Consumer Spending</option>
+        </select>
+        <svg width="800" height="400"></svg>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 },
+              width = 800 - margin.left - margin.right,
+              height = 400 - margin.top - margin.bottom;
+
+        const svg = d3.select("svg")
+                      .append("g")
+                      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const tooltip = d3.select("#tooltip");
+
+        const xScale = d3.scaleLinear().range([0, width]);
+        const yScale = d3.scaleLinear().range([height, 0]);
+
+        const xAxis = svg.append("g").attr("transform", `translate(0,${height})`);
+        const yAxis = svg.append("g");
+
+        const line = d3.line()
+                       .x(d => xScale(d.year))
+                       .y(d => yScale(d.value));
+
+        const loadMetricData = async (metric) => {
+            const data = await d3.csv(`data/cleaned-${metric}.csv`);
+
+            const usData = data.filter(d => d.GeoName === "United States");
+
+            const years = Object.keys(usData[0]).filter(key => !isNaN(key)).map(Number);
+            const formattedData = years.map(year => ({
+                year,
+                value: +usData[0][year]
+            }));
+
+            xScale.domain(d3.extent(formattedData, d => d.year));
+            yScale.domain([0, d3.max(formattedData, d => d.value)]);
+
+            xAxis.call(d3.axisBottom(xScale).tickFormat(d3.format("d")));
+            yAxis.call(d3.axisLeft(yScale));
+
+            svg.selectAll(".line").remove();
+            svg.selectAll(".dot").remove();
+
+            svg.append("path")
+                .datum(formattedData)
+                .attr("class", "line")
+                .attr("fill", "none")
+                .attr("stroke", "#007bff")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+
+            svg.selectAll(".dot")
+                .data(formattedData)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => xScale(d.year))
+                .attr("cy", d => yScale(d.value))
+                .attr("r", 4)
+                .attr("fill", "#007bff")
+                .on("mouseover", (event, d) => {
+                    tooltip.style("opacity", 1)
+                           .text(`Year: ${d.year}, Value: ${d.value}`);
+                    tooltip.style("top", (yScale(d.value) - 10) + "px")
+                           .style("left", (xScale(d.year)+ 10) + "px");
+                })
+                .on("mouseout", () => {
+                    tooltip.style("opacity", 0);
+                });
+        };
+
+        loadMetricData("personal-income");
+
+        d3.select("#metric").on("change", function() {
+            loadMetricData(this.value);
+        });
+    </script>
+</body>
+</html>

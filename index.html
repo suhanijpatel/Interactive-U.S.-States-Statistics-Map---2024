@@ -80,11 +80,28 @@
     #slider-container {
       margin-bottom: 15px;
     }
+
+    .description {
+      margin: 10px 0 20px;
+      font-size: 16px;
+      text-align: center;
+      max-width: 960px;
+      line-height: 1.5;
+      color: #333;
+    }
   </style>
 </head>
 
 <body>
   <div class="title">US State Metrics Visualization</div>
+
+  <div class="description">
+    This map visualizes state-level metrics such as Total Personal Income, GDP, and Consumer Spending for the United
+    States.
+    Use the slider to select a year and the dropdown menu to choose a metric. Hover over a state to see detailed
+    information
+    for the selected year and metric.
+  </div>
 
   <div class="map-container">
     <div id="controls-container" style="position: relative; margin-bottom: 20px;">
@@ -262,13 +279,13 @@
     const updateLegend = (colorScale, metric) => {
       const legendWidth = 300, legendHeight = 10;
       const legend = d3.select("#legend").html("").append("svg")
-        .attr("width", legendWidth + 40)
+        .attr("width", legendWidth + 150)
         .attr("height", 80);
 
       const quantileThresholds = colorScale.quantiles();
       quantileThresholds.forEach((threshold, i) => {
         legend.append("rect")
-          .attr("x", (legendWidth / quantileThresholds.length) * i + 10)
+          .attr("x", (legendWidth / quantileThresholds.length) * i + 50)
           .attr("y", 10)
           .attr("width", legendWidth / quantileThresholds.length)
           .attr("height", legendHeight)
@@ -277,7 +294,7 @@
 
       const legendScale = d3.scaleLinear()
         .domain([quantileThresholds[0], quantileThresholds[quantileThresholds.length - 1]])
-        .range([10, legendWidth + 10]);
+        .range([50, legendWidth + 50]);
 
       const axis = d3.axisBottom(legendScale)
         .ticks(5)
@@ -288,7 +305,7 @@
         .call(axis);
 
       legend.append("text")
-        .attr("x", legendWidth / 2)
+        .attr("x", legendWidth / 1.5)
         .attr("y", 70)
         .attr("text-anchor", "middle")
         .style("fill", "black")

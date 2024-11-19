@@ -4,9 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <title>US State Metrics Visualization</title>
+  <!-- Include D3.js and TopoJSON libraries for data visualization and geographic data processing -->
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://d3js.org/topojson.v3.min.js"></script>
   <style>
+    /* Styling for the page layout, map container, tooltip, and other elements */
     body {
       margin: 0;
       display: flex;
@@ -29,7 +31,6 @@
       display: inline-block;
       border-radius: 10px;
       width: 1000px;
-      /* Adjust to fit the SVG width with padding */
       height: 950px;
     }
 
@@ -107,6 +108,7 @@
 <body>
   <div class="title">US State Metrics Visualization</div>
 
+  <!-- Description of the visualization -->
   <div class="description">
     This map visualizes state-level financial metrics such as Total Personal Income, GDP, and Consumer Spending for the
     United
@@ -131,11 +133,13 @@
         </select>
       </div>
     </div>
+
+    <!-- SVG element that renders the map -->
     <svg width="960" height="600"></svg>
+    <!-- Color scale container -->
     <div id="legend"></div>
   </div>
   <!--- Creating a tooltip container with an svg for the linechart within it-->
-
   <div class="tooltip-chart" style="display: none;">
     <div id="tooltip-text"></div>
     <div class="linechart-container">
@@ -161,6 +165,7 @@
     const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2 + 160]);
     const path = d3.geoPath().projection(projection);
 
+    //mapping state IDs to state names
     const stateIdToName = {
       1: "Alabama", 2: "Alaska", 4: "Arizona", 5: "Arkansas", 6: "California",
       8: "Colorado", 9: "Connecticut", 10: "Delaware", 11: "District of Columbia", 12: "Florida",
@@ -174,6 +179,7 @@
       53: "Washington", 54: "West Virginia", 55: "Wisconsin", 56: "Wyoming"
     };
 
+    //labels and units for each metric
     const metricLabels = {
       personalIncome: "Total Personal Income [Millions of USD]",
       gdp: "GDP [Billions of USD]",
@@ -263,12 +269,15 @@
 
     //creates legend with the quantile thresholds andan axis and displays it with the name of the metric
     const updateLegend = (colorScale, metric) => {
+      //dimensions
       const legendWidth = 300, legendHeight = 10;
       const legend = d3.select("#legend").html("").append("svg")
         .attr("width", legendWidth + 150)
         .attr("height", 100);
 
+      //get quantile thresholds
       const quantileThresholds = colorScale.quantiles();
+      //itearte each quantile and create a colored rectangle
       quantileThresholds.forEach((threshold, i) => {
         legend.append("rect")
           .attr("x", (legendWidth / quantileThresholds.length) * i + 50)
@@ -278,19 +287,22 @@
           .attr("fill", colorScale(threshold));
       });
 
+      //create a scale for axis using the min and max of the quantile thresholds
       const legendScale = d3.scaleLinear()
         .domain([quantileThresholds[0], quantileThresholds[quantileThresholds.length - 1]])
         .range([50, legendWidth + 50]);
 
+      //define axis for color scale
       const axis = d3.axisBottom(legendScale)
         .ticks(5)
         .tickFormat(d3.format(".2s"));
 
+      //append axis
       legend.append("g")
-        .attr("transform", `translate(0, ${50 + legendHeight + 10})`) // Adjust position below the rectangles
+        .attr("transform", `translate(0, ${50 + legendHeight + 10})`)
         .call(axis);
 
-
+      //add label to color scale
       legend.append("text")
         .attr("x", legendWidth / 1.5)
         .attr("y", 110)
@@ -302,14 +314,14 @@
 
     //draws a line chart within the tooltip for the selected state and metric
     const drawLineChart = (stateData, metric, year) => {
-      // Extract years and values for the state
+      //extract years and values for the state
       const years = Object.keys(stateData).filter(d => !isNaN(d));
       const values = years.map(y => ({
         year: +y,
         value: +stateData[y]
       }));
 
-      // Define x and y scales
+      //creating x and y scales
       const xScale = d3.scaleLinear()
         .domain(d3.extent(values, d => d.year))
         .range([0, line_width]);
@@ -318,19 +330,19 @@
         .domain([d3.min(values, d => d.value), d3.max(values, d => d.value)])
         .range([line_height, 0]);
 
-      // Clear previous chart elements
+      //clear all the elements in the chart previously 
       linechartSvg.selectAll("*").remove();
 
-      // Append x-axis
+      //append the x-axis
       linechartSvg.append("g")
         .attr("transform", `translate(0, ${line_height})`)
         .call(d3.axisBottom(xScale).tickFormat(d3.format("d")));
 
-      // Append y-axis
+      //append the y-axis
       linechartSvg.append("g")
         .call(d3.axisLeft(yScale));
 
-      // Draw the line
+      //draw the line in the chart
       linechartSvg.append("path")
         .datum(values)
         .attr("fill", "none")
@@ -341,7 +353,7 @@
           .y(d => yScale(d.value))
         );
 
-      // Add labels for axes
+      //labels for axes
       linechartSvg.append("text")
         .attr("transform", `translate(${line_width / 2}, ${line_height + margin.bottom - 3})`)
         .style("text-anchor", "middle")

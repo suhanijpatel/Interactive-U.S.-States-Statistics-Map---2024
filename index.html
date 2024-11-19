@@ -225,14 +225,16 @@
         .attr("stroke", "#000")
         .attr("stroke-width", 1)
         .on("mouseover", (event, d) => {
+          const originalColor = d3.select(event.target).attr("fill");
+          d3.select(event.target).attr("data-original-fill", originalColor);
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : null;
-
+          d3.select(event.target).attr("fill", "#FF69B4");
           tooltip.style("display", "block")
             .style("left", `${event.pageX + 10}px`)
             .style("top", `${event.pageY + 10}px`);
-    
+          
           tooltip.select("#tooltip-text")
             .html(`<strong>${stateName}</strong><br/>
             ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
@@ -242,6 +244,10 @@
         })
         .on("mouseout", () => {
           tooltip.style("display", "none");
+          const originalColor = d3.select(event.target).attr("data-original-fill");
+
+          d3.select(event.target).attr("fill", originalColor);
+
         });
         updateLegend(quantiles, metric);
     };

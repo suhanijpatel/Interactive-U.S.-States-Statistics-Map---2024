@@ -53,7 +53,7 @@
       display: block;
     }
 
-    .tooltip {
+    .tooltip-chart {
       position: absolute;
       background-color: white;
       border: 1px solid #ccc;
@@ -127,7 +127,7 @@
   </div>
   <!--- Creating a tooltip container with an svg for the linechart within it-->
 
-  <div class="tooltip" style="display: none;">
+  <div class="tooltip-chart" style="display: none;">
     <div id="tooltip-text"></div>
     <div class="linechart-container">
       <svg id="linechart" width="400" height="200"></svg>
@@ -138,7 +138,7 @@
     const width = 960, height = 600;
     //defining map svg, and the tooltip with an svg inside of it with the given margins
     const svg = d3.select("svg");
-    const tooltip = d3.select(".tooltip");
+    const tooltip = d3.select(".tooltip-chart");
     const margin = { top: 5, right: 10, bottom: 30, left: 55 };
     const line_width = 300;
     const line_height = 200;
@@ -149,7 +149,7 @@
       .attr("transform", `translate(${margin.left}, ${margin.top})`);
   
     //creates a projection of the us map
-    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2]);
+    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2+70]);
     const path = d3.geoPath().projection(projection);
 
     const stateIdToName = {
@@ -232,8 +232,8 @@
           const value = stateData ? +stateData[year] : null;
           d3.select(event.target).attr("fill", "#FF69B4");
           tooltip.style("display", "block")
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY + 10}px`);
+            .style("left", `${width-170}px`)
+            .style("top", `${170}px`);
           //displays title of label
           tooltip.select("#tooltip-text")
             .html(`<strong>${stateName}</strong><br/>
@@ -257,13 +257,13 @@
       const legendWidth = 300, legendHeight = 10;
       const legend = d3.select("#legend").html("").append("svg")
         .attr("width", legendWidth + 150)
-        .attr("height", 80);
+        .attr("height", 100);
 
       const quantileThresholds = colorScale.quantiles();
       quantileThresholds.forEach((threshold, i) => {
         legend.append("rect")
           .attr("x", (legendWidth / quantileThresholds.length) * i + 50)
-          .attr("y", 10)
+          .attr("y", 50)
           .attr("width", legendWidth / quantileThresholds.length)
           .attr("height", legendHeight)
           .attr("fill", colorScale(threshold));
@@ -283,7 +283,7 @@
 
       legend.append("text")
         .attr("x", legendWidth / 1.5)
-        .attr("y", 70)
+        .attr("y", 100)
         .attr("text-anchor", "middle")
         .style("fill", "black")
         .style("font-size", "14px")

@@ -60,7 +60,6 @@
       padding: 5px;
       pointer-events: none;
       max-width: 600px;
-      /* display: none; */
     }
 
     .linechart-container {
@@ -107,7 +106,7 @@
     Use the slider to select a year and the dropdown menu to choose a metric. Hover over a state to see detailed
     information for the selected year and metric.
   </div>
-
+  <!--- Creating a map container with controls, drop down for metric and a year slider-->
   <div class="map-container">
     <div id="controls-container" style="position: relative; margin-bottom: 20px;">
       <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 15px;">
@@ -126,6 +125,7 @@
     <svg width="960" height="600"></svg>
     <div id="legend"></div>
   </div>
+  <!--- Creating a tooltip container with an svg for the linechart within it-->
 
   <div class="tooltip" style="display: none;">
     <div id="tooltip-text"></div>
@@ -136,7 +136,7 @@
 
   <script>
     const width = 960, height = 600;
-
+    //defining map svg, and the tooltip with an svg inside of it with the given margins
     const svg = d3.select("svg");
     const tooltip = d3.select(".tooltip");
     const margin = { top: 5, right: 10, bottom: 30, left: 55 };
@@ -147,11 +147,8 @@
       .attr("height", line_height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", `translate(${margin.left}, ${margin.top})`);
-
-
- 
   
-  
+    //creates a projection of the us map
     const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2]);
     const path = d3.geoPath().projection(projection);
 
@@ -181,6 +178,8 @@
     };
     
 
+    //getting state data and us state boundaries and finding the min and max of all the data as well as storing
+    //all of the data in one dictionary
     const loadData = async () => {
       const geoData = await d3.json("data/cleaned-us-state-boundaries.json");
       const personalIncome = await d3.csv("data/cleaned-personal-income.csv");
@@ -201,7 +200,7 @@
 
       return { states, allData, years, globalMinMax };
     };
-
+    //colors in map base on the color and adds the mouseover that changes the color and adds the tooltip
     const updateMap = (states, data, metric, year, globalMinMax) => {
       const [globalMin, globalMax] = globalMinMax[metric];
       const allValues = data[metric].flatMap(row => {
@@ -216,6 +215,7 @@
         .data(states.features)
         .join("path")
         .attr("d", path)
+        //colors in each state based on value and quantile
         .attr("fill", d => {
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
@@ -234,7 +234,7 @@
           tooltip.style("display", "block")
             .style("left", `${event.pageX + 10}px`)
             .style("top", `${event.pageY + 10}px`);
-          
+          //displays title of label
           tooltip.select("#tooltip-text")
             .html(`<strong>${stateName}</strong><br/>
             ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
@@ -243,14 +243,16 @@
           drawLineChart(stateData, metric, year);
         })
         .on("mouseout", () => {
+          //changes colorback and hides tooltip on mouseout
           tooltip.style("display", "none");
           const originalColor = d3.select(event.target).attr("data-original-fill");
-
           d3.select(event.target).attr("fill", originalColor);
 
         });
         updateLegend(quantiles, metric);
     };
+    
+    //creates legend with the quantile thresholds andan axis and displays it with the name of the metric
     const updateLegend = (colorScale, metric) => {
       const legendWidth = 300, legendHeight = 10;
       const legend = d3.select("#legend").html("").append("svg")
@@ -288,7 +290,7 @@
         .text(`Color Scale For ${metricLabels[metric]}`);
     };
 
-
+    //draws a line chart within the tooltip for the selected state and metric
     const drawLineChart = (stateData, metric, year) => {
       const years = Object.keys(stateData).filter(d => !isNaN(d));
       const values = years.map(y => ({
@@ -327,6 +329,7 @@
         .call(d3.axisLeft(yScale));
     };
 
+    //adds year sliders and metrics and calls the appropriate update function for the map based on what is selected
     loadData().then(({ states, allData, years, globalMinMax }) => {
       const yearSlider = d3.select("#year-slider");
       yearSlider.attr("max", years.length - 1);

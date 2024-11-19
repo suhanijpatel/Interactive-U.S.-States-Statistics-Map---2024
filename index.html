@@ -64,7 +64,8 @@
       border: 1px solid #ccc;
       padding: 15px;
       pointer-events: none;
-      max-width: 800px;
+      max-width: 1000px;
+      width: 400px;
     }
 
     .linechart-container {
@@ -147,7 +148,7 @@
     //defining map svg, and the tooltip with an svg inside of it with the given margins
     const svg = d3.select("svg");
     const tooltip = d3.select(".tooltip-chart");
-    const margin = { top: 20, right: 10, bottom: 40, left: 70 };
+    const margin = { top: 20, right: 40, bottom: 40, left: 70 };
     const line_width = 300;
     const line_height = 200;
     const linechartSvg = d3.select("#linechart")

@@ -55,7 +55,7 @@
 
     svg {
       display: block;
-      height: 750px;
+      height: 800px;
     }
 
     .tooltip-chart {
@@ -240,7 +240,7 @@
           const value = stateData ? +stateData[year] : null;
           d3.select(event.target).attr("fill", "#FF69B4");
           tooltip.style("display", "block")
-            .style("left", `${width - 160}px`)
+            .style("left", `${width - 170}px`)
             .style("top", `${170}px`);
           //displays title of label
           tooltip.select("#tooltip-text")
@@ -262,7 +262,7 @@
 
     //creates legend with the quantile thresholds andan axis and displays it with the name of the metric
     const updateLegend = (colorScale, metric) => {
-      const legendWidth = 300, legendHeight = 15;
+      const legendWidth = 300, legendHeight = 10;
       const legend = d3.select("#legend").html("").append("svg")
         .attr("width", legendWidth + 150)
         .attr("height", 100);

@@ -28,6 +28,8 @@
       position: relative;
       display: inline-block;
       border-radius: 10px;
+      width: 1000px; /* Adjust to fit the SVG width with padding */
+      height: 1000px;
     }
 
     .dropdown {
@@ -52,20 +54,21 @@
 
     svg {
       display: block;
+      height: 800px;
     }
 
     .tooltip-chart {
       position: absolute;
       background-color: white;
       border: 1px solid #ccc;
-      padding: 5px;
+      padding: 15px;
       pointer-events: none;
-      max-width: 600px;
+      max-width: 800px;
     }
 
     .linechart-container {
       width: 350px;
-      height: 200px;
+      height: 250px;
       margin-top: 10px;
     }
 
@@ -143,7 +146,7 @@
     //defining map svg, and the tooltip with an svg inside of it with the given margins
     const svg = d3.select("svg");
     const tooltip = d3.select(".tooltip-chart");
-    const margin = { top: 5, right: 10, bottom: 30, left: 55 };
+    const margin = { top: 20, right: 10, bottom: 40, left: 70 };
     const line_width = 300;
     const line_height = 200;
     const linechartSvg = d3.select("#linechart")
@@ -153,7 +156,7 @@
       .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
     //creates a projection of the us map
-    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2 + 70]);
+    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2 + 150]);
     const path = d3.geoPath().projection(projection);
 
     const stateIdToName = {
@@ -170,9 +173,9 @@
     };
 
     const metricLabels = {
-      personalIncome: "Total Personal Income [Millions of Dollars]",
-      gdp: "GDP [Billions of Dollars]",
-      consumerSpending: "Total Consumer Spending [Millions of Dollars]"
+      personalIncome: "Total Personal Income [Millions of USD]",
+      gdp: "GDP [Billions of USD]",
+      consumerSpending: "Total Consumer Spending [Millions of USD]"
     };
 
     const metricUnits = {
@@ -240,7 +243,7 @@
             .style("top", `${170}px`);
           //displays title of label
           tooltip.select("#tooltip-text")
-            .html(`<strong>${stateName}</strong><br/>
+            .html(`<strong>${stateName} (${year})</strong><br/>
             ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
 
 
@@ -296,42 +299,61 @@
 
     //draws a line chart within the tooltip for the selected state and metric
     const drawLineChart = (stateData, metric, year) => {
-      const years = Object.keys(stateData).filter(d => !isNaN(d));
-      const values = years.map(y => ({
-        year: y,
-        value: +stateData[y]
-      }));
+  // Extract years and values for the state
+  const years = Object.keys(stateData).filter(d => !isNaN(d));
+  const values = years.map(y => ({
+    year: +y,
+    value: +stateData[y]
+  }));
 
-      const xScale = d3.scaleTime()
-        .domain(d3.extent(values, d => new Date(d.year)))
-        .range([0, 280]);
+  // Define x and y scales
+  const xScale = d3.scaleLinear()
+    .domain(d3.extent(values, d => d.year))
+    .range([0, line_width]);
 
-      const yScale = d3.scaleLinear()
-        .domain([d3.min(values, d => d.value), d3.max(values, d => d.value)])
-        .range([180, 0]);
+  const yScale = d3.scaleLinear()
+    .domain([d3.min(values, d => d.value), d3.max(values, d => d.value)])
+    .range([line_height, 0]);
 
-      const line = d3.line()
-        .x(d => xScale(new Date(d.year)))
-        .y(d => yScale(d.value));
+  // Clear previous chart elements
+  linechartSvg.selectAll("*").remove();
 
-      linechartSvg.selectAll("*").remove();
+  // Append x-axis
+  linechartSvg.append("g")
+    .attr("transform", `translate(0, ${line_height})`)
+    .call(d3.axisBottom(xScale).tickFormat(d3.format("d")));
 
-      linechartSvg.append("path")
-        .data([values])
-        .attr("class", "line")
-        .attr("d", line)
-        .attr("stroke", "steelblue")
-        .attr("fill", "none")
-        .attr("stroke-width", 2);
+  // Append y-axis
+  linechartSvg.append("g")
+    .call(d3.axisLeft(yScale));
 
-      linechartSvg.append("g")
-        .attr("transform", "translate(0,180)")
-        .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%Y")).ticks(5));
+  // Draw the line
+  linechartSvg.append("path")
+    .datum(values)
+    .attr("fill", "none")
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", 2)
+    .attr("d", d3.line()
+      .x(d => xScale(d.year))
+      .y(d => yScale(d.value))
+    );
 
-      linechartSvg.append("g")
-        .attr("transform", "translate(0,0)")
-        .call(d3.axisLeft(yScale));
-    };
+  // Add labels for axes
+  linechartSvg.append("text")
+    .attr("transform", `translate(${line_width / 2}, ${line_height + margin.bottom-3})`)
+    .style("text-anchor", "middle")
+    .style("font-size", "12px")
+    .text("Year");
+
+  linechartSvg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 10)
+    .attr("x", -line_height / 2)
+    .style("text-anchor", "middle")
+    .style("font-size", "12px")
+    .text(metricLabels[metric]);
+};
+
 
     //adds year sliders and metrics and calls the appropriate update function for the map based on what is selected
     loadData().then(({ states, allData, years, globalMinMax }) => {

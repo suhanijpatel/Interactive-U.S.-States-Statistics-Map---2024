@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>US State Metrics Visualization</title>
@@ -26,7 +27,7 @@
       padding: 20px;
       position: relative;
       display: inline-block;
-      border-radius: 10px;
+      border-radius: 5px;
     }
 
     .dropdown {
@@ -97,6 +98,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="title">US State Metrics Visualization</div>
 
@@ -147,21 +149,21 @@
       .attr("height", line_height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", `translate(${margin.left}, ${margin.top})`);
-  
+
     //creates a projection of the us map
-    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2+70]);
+    const projection = d3.geoAlbersUsa().scale(1000).translate([width / 2, height / 2 + 70]);
     const path = d3.geoPath().projection(projection);
 
     const stateIdToName = {
-      1: "Alabama", 2: "Alaska", 4: "Arizona", 5: "Arkansas", 6: "California", 
+      1: "Alabama", 2: "Alaska", 4: "Arizona", 5: "Arkansas", 6: "California",
       8: "Colorado", 9: "Connecticut", 10: "Delaware", 11: "District of Columbia", 12: "Florida",
-      13: "Georgia", 15: "Hawaii", 16: "Idaho", 17: "Illinois", 18: "Indiana", 19: "Iowa", 
-      20: "Kansas", 21: "Kentucky", 22: "Louisiana", 23: "Maine", 24: "Maryland", 
-      25: "Massachusetts", 26: "Michigan", 27: "Minnesota", 28: "Mississippi", 29: "Missouri", 
-      30: "Montana", 31: "Nebraska", 32: "Nevada", 33: "New Hampshire", 34: "New Jersey", 
-      35: "New Mexico", 36: "New York", 37: "North Carolina", 38: "North Dakota", 39: "Ohio", 
-      40: "Oklahoma", 41: "Oregon", 42: "Pennsylvania", 44: "Rhode Island", 45: "South Carolina", 
-      46: "South Dakota", 47: "Tennessee", 48: "Texas", 49: "Utah", 50: "Vermont", 51: "Virginia", 
+      13: "Georgia", 15: "Hawaii", 16: "Idaho", 17: "Illinois", 18: "Indiana", 19: "Iowa",
+      20: "Kansas", 21: "Kentucky", 22: "Louisiana", 23: "Maine", 24: "Maryland",
+      25: "Massachusetts", 26: "Michigan", 27: "Minnesota", 28: "Mississippi", 29: "Missouri",
+      30: "Montana", 31: "Nebraska", 32: "Nevada", 33: "New Hampshire", 34: "New Jersey",
+      35: "New Mexico", 36: "New York", 37: "North Carolina", 38: "North Dakota", 39: "Ohio",
+      40: "Oklahoma", 41: "Oregon", 42: "Pennsylvania", 44: "Rhode Island", 45: "South Carolina",
+      46: "South Dakota", 47: "Tennessee", 48: "Texas", 49: "Utah", 50: "Vermont", 51: "Virginia",
       53: "Washington", 54: "West Virginia", 55: "Wisconsin", 56: "Wyoming"
     };
 
@@ -176,7 +178,7 @@
       gdp: "Billion USD",
       consumerSpending: "USD"
     };
-    
+
 
     //getting state data and us state boundaries and finding the min and max of all the data as well as storing
     //all of the data in one dictionary
@@ -227,21 +229,41 @@
         .on("mouseover", (event, d) => {
           const originalColor = d3.select(event.target).attr("fill");
           d3.select(event.target).attr("data-original-fill", originalColor);
+
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : null;
           d3.select(event.target).attr("fill", "#FF69B4");
+
+          // Get the map container and year slider dimensions
+          const mapContainer = d3.select(".map-container").node().getBoundingClientRect();
+          const yearSlider = d3.select("#year-slider").node().getBoundingClientRect();
+          const tooltipWidth = tooltip.node().offsetWidth;
+          const tooltipHeight = tooltip.node().offsetHeight;
+
+          // Position the tooltip at the opposite end of the year slider horizontally
+          const tooltipLeft =
+            yearSlider.right + 250
+          // Ensure tooltip stays within the map container vertically
+          const tooltipTop =
+            mapContainer.bottom - 200 // Prevent overflow at the bottom
+
+
+          // Set the tooltip position
           tooltip.style("display", "block")
-            .style("left", `${width-170}px`)
-            .style("top", `${170}px`);
-          //displays title of label
+            .style("left", `${tooltipLeft}px`)
+            .style("top", `${tooltipTop}px`);
+
+          // Update tooltip content
           tooltip.select("#tooltip-text")
             .html(`<strong>${stateName}</strong><br/>
-            ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
-            
+    ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
 
           drawLineChart(stateData, metric, year);
         })
+
+
+
         .on("mouseout", () => {
           //changes colorback and hides tooltip on mouseout
           tooltip.style("display", "none");
@@ -249,9 +271,9 @@
           d3.select(event.target).attr("fill", originalColor);
 
         });
-        updateLegend(quantiles, metric);
+      updateLegend(quantiles, metric);
     };
-    
+
     //creates legend with the quantile thresholds andan axis and displays it with the name of the metric
     const updateLegend = (colorScale, metric) => {
       const legendWidth = 300, legendHeight = 10;
@@ -283,7 +305,7 @@
 
       legend.append("text")
         .attr("x", legendWidth / 1.5)
-        .attr("y", 100)
+        .attr("y", 90)
         .attr("text-anchor", "middle")
         .style("fill", "black")
         .style("font-size", "14px")
@@ -351,4 +373,5 @@
     });
   </script>
 </body>
+
 </html>

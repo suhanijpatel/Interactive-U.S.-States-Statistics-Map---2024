@@ -27,7 +27,7 @@
       padding: 20px;
       position: relative;
       display: inline-block;
-      border-radius: 5px;
+      border-radius: 10px;
     }
 
     .dropdown {
@@ -229,41 +229,21 @@
         .on("mouseover", (event, d) => {
           const originalColor = d3.select(event.target).attr("fill");
           d3.select(event.target).attr("data-original-fill", originalColor);
-
           const stateName = stateIdToName[d.id];
           const stateData = data[metric].find(row => row.GeoName === stateName);
           const value = stateData ? +stateData[year] : null;
           d3.select(event.target).attr("fill", "#FF69B4");
-
-          // Get the map container and year slider dimensions
-          const mapContainer = d3.select(".map-container").node().getBoundingClientRect();
-          const yearSlider = d3.select("#year-slider").node().getBoundingClientRect();
-          const tooltipWidth = tooltip.node().offsetWidth;
-          const tooltipHeight = tooltip.node().offsetHeight;
-
-          // Position the tooltip at the opposite end of the year slider horizontally
-          const tooltipLeft =
-            yearSlider.right + 250
-          // Ensure tooltip stays within the map container vertically
-          const tooltipTop =
-            mapContainer.bottom - 200 // Prevent overflow at the bottom
-
-
-          // Set the tooltip position
           tooltip.style("display", "block")
-            .style("left", `${tooltipLeft}px`)
-            .style("top", `${tooltipTop}px`);
-
-          // Update tooltip content
+            .style("left", `${width - 170}px`)
+            .style("top", `${170}px`);
+          //displays title of label
           tooltip.select("#tooltip-text")
             .html(`<strong>${stateName}</strong><br/>
-    ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
+            ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
+
 
           drawLineChart(stateData, metric, year);
         })
-
-
-
         .on("mouseout", () => {
           //changes colorback and hides tooltip on mouseout
           tooltip.style("display", "none");

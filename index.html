@@ -28,7 +28,8 @@
       position: relative;
       display: inline-block;
       border-radius: 10px;
-      width: 1000px; /* Adjust to fit the SVG width with padding */
+      width: 1000px;
+      /* Adjust to fit the SVG width with padding */
       height: 1000px;
     }
 
@@ -54,7 +55,7 @@
 
     svg {
       display: block;
-      height: 800px;
+      height: 750px;
     }
 
     .tooltip-chart {
@@ -239,7 +240,7 @@
           const value = stateData ? +stateData[year] : null;
           d3.select(event.target).attr("fill", "#FF69B4");
           tooltip.style("display", "block")
-            .style("left", `${width - 170}px`)
+            .style("left", `${width - 160}px`)
             .style("top", `${170}px`);
           //displays title of label
           tooltip.select("#tooltip-text")
@@ -261,7 +262,7 @@
 
     //creates legend with the quantile thresholds andan axis and displays it with the name of the metric
     const updateLegend = (colorScale, metric) => {
-      const legendWidth = 300, legendHeight = 10;
+      const legendWidth = 300, legendHeight = 15;
       const legend = d3.select("#legend").html("").append("svg")
         .attr("width", legendWidth + 150)
         .attr("height", 100);
@@ -299,60 +300,60 @@
 
     //draws a line chart within the tooltip for the selected state and metric
     const drawLineChart = (stateData, metric, year) => {
-  // Extract years and values for the state
-  const years = Object.keys(stateData).filter(d => !isNaN(d));
-  const values = years.map(y => ({
-    year: +y,
-    value: +stateData[y]
-  }));
+      // Extract years and values for the state
+      const years = Object.keys(stateData).filter(d => !isNaN(d));
+      const values = years.map(y => ({
+        year: +y,
+        value: +stateData[y]
+      }));
 
-  // Define x and y scales
-  const xScale = d3.scaleLinear()
-    .domain(d3.extent(values, d => d.year))
-    .range([0, line_width]);
+      // Define x and y scales
+      const xScale = d3.scaleLinear()
+        .domain(d3.extent(values, d => d.year))
+        .range([0, line_width]);
 
-  const yScale = d3.scaleLinear()
-    .domain([d3.min(values, d => d.value), d3.max(values, d => d.value)])
-    .range([line_height, 0]);
+      const yScale = d3.scaleLinear()
+        .domain([d3.min(values, d => d.value), d3.max(values, d => d.value)])
+        .range([line_height, 0]);
 
-  // Clear previous chart elements
-  linechartSvg.selectAll("*").remove();
+      // Clear previous chart elements
+      linechartSvg.selectAll("*").remove();
 
-  // Append x-axis
-  linechartSvg.append("g")
-    .attr("transform", `translate(0, ${line_height})`)
-    .call(d3.axisBottom(xScale).tickFormat(d3.format("d")));
+      // Append x-axis
+      linechartSvg.append("g")
+        .attr("transform", `translate(0, ${line_height})`)
+        .call(d3.axisBottom(xScale).tickFormat(d3.format("d")));
 
-  // Append y-axis
-  linechartSvg.append("g")
-    .call(d3.axisLeft(yScale));
+      // Append y-axis
+      linechartSvg.append("g")
+        .call(d3.axisLeft(yScale));
 
-  // Draw the line
-  linechartSvg.append("path")
-    .datum(values)
-    .attr("fill", "none")
-    .attr("stroke", "steelblue")
-    .attr("stroke-width", 2)
-    .attr("d", d3.line()
-      .x(d => xScale(d.year))
-      .y(d => yScale(d.value))
-    );
+      // Draw the line
+      linechartSvg.append("path")
+        .datum(values)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 2)
+        .attr("d", d3.line()
+          .x(d => xScale(d.year))
+          .y(d => yScale(d.value))
+        );
 
-  // Add labels for axes
-  linechartSvg.append("text")
-    .attr("transform", `translate(${line_width / 2}, ${line_height + margin.bottom-3})`)
-    .style("text-anchor", "middle")
-    .style("font-size", "12px")
-    .text("Year");
+      // Add labels for axes
+      linechartSvg.append("text")
+        .attr("transform", `translate(${line_width / 2}, ${line_height + margin.bottom - 3})`)
+        .style("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Year");
 
-  linechartSvg.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", -margin.left + 10)
-    .attr("x", -line_height / 2)
-    .style("text-anchor", "middle")
-    .style("font-size", "12px")
-    .text(metricLabels[metric]);
-};
+      linechartSvg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -margin.left + 10)
+        .attr("x", -line_height / 2)
+        .style("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text(metricLabels[metric]);
+    };
 
 
     //adds year sliders and metrics and calls the appropriate update function for the map based on what is selected

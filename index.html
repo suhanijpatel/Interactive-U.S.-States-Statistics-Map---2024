@@ -170,7 +170,7 @@
 
     const metricLabels = {
       personalIncome: "Total Personal Income [Millions of Dollars]",
-      gdp: "GDP",
+      gdp: "GDP [Billions of Dollars]",
       consumerSpending: "Total Consumer Spending [Millions of Dollars]"
     };
 
@@ -232,9 +232,11 @@
           tooltip.style("display", "block")
             .style("left", `${event.pageX + 10}px`)
             .style("top", `${event.pageY + 10}px`);
-
+    
           tooltip.select("#tooltip-text")
-            .html(`${stateName}: ${value ? value : "No data"}`);
+            .html(`<strong>${stateName}</strong><br/>
+            ${metricLabels[metric]}: ${value ? value.toFixed(2) : "Data unavailable"} ${metricUnits[metric]}`);
+            
 
           drawLineChart(stateData, metric, year);
         })
